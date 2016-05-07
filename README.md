@@ -14,5 +14,7 @@ Task | Progress
 deploy hadoop cluster with docker image | DOING
 dploy k8s with local cluster | DONE
 deploy dns service on k8s | DONE
+deploy an app with dns | DOING
+deploy an app with proxy | TODO
 deploy hadoop image on k8 | DOING
 Runing a mapreducer job | TODO 
