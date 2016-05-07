@@ -9,10 +9,10 @@ Deploy Apache-Hadoop on kubernetes, I will record some problem with issues while
 
 ## RoadMap
 
-|task|progress|
-|-|-|
-|deploy hadoop cluster with docker image|DOING|
-|dploy k8s with local cluster|DONE|
-|deploy dns service on k8s|DONE|
-|deploy hadoop image on k8|DOING|
-
+Task | Progress
+----- | --------
+deploy hadoop cluster with docker image | DOING
+dploy k8s with local cluster | DONE
+deploy dns service on k8s | DONE
+deploy hadoop image on k8 | DOING
+Runing a mapreducer job | TODO 
