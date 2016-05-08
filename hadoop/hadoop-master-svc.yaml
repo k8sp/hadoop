@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: hadoop
+  name: hadoop-master
   labels:
-    component: hadoop
+    component: hadoop-master
     role: master
 spec:
   selector:
-    component: elasticsearch
+    component: hadoop-master
   ports:
   - name: http
     port: 8088
@@ -26,4 +26,4 @@ spec:
     protocol: TCP
   - name: webapp
     port: 8090
-    protocol: TCP 
+    protocol: TCP
