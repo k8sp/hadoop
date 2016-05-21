@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hadoop-hdfs
+  labels:
+    component: hadoop-hdfs
+spec:
+  selector:
+    component: hadoop-hdfs
+  ports:
+  - name: clientprotocol
+    port: 9000
+    protocol: TCP
+  - name: httpconnector
+    port: 50070
+    protocol: TCP
+

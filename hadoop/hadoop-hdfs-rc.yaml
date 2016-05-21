@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: hadoop-hdfs
+  labels:
+    component: hadoop-hdfs
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: hadoop-hdfs
+    spec:
+      imagePullSecrets:
+      - name: bfdreg
+      containers:
+      - name: hadoop-hdfs-namenode
+        image: yancey1989/hadoop-hdfs:1.1
+        ports:
+        - containerPort: 9000
+          name: clientprotocol
+          protocol: TCP
+        - containerPort: 50070
+          name: httpconnector
+          protocol: TCP
+      volumes:
+      - name: storage
+        emptyDir: {}
+
