@@ -2,6 +2,9 @@
 
 Deploy Apache-Hadoop on kubernetes, I will record some problem with issues while doing the project.
 
+## Cluster init
+Checkout: (init/README.md)
+
 ## Target
 
 * ResourceManager and NodeManager will be running with docker on k8s.
