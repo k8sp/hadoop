@@ -43,3 +43,20 @@ docker -H unix:///var/run/early-docker.sock ps
 docker -H unix:///var/run/early-docker.sock logs [your flannel container name]
 ```
 ## 部署kubernetes
+执行下面的命令完成初始化
+```
+git clone https://github.com/k8sp/hadoop.git
+cd hadoop/init
+sudo su
+. ./env.sh
+```
+如果是在CoreOS上，检查/run/flannel_docker_opts.env是否正确，检查flannel服务正常运行
+然后执行：
+```
+./master.sh
+```
+等待启动完成，之后可以查看如果hyperkube kublet进程和对应的proxy, apiserver, master启动完成
+```
+docker ps
+```
+
