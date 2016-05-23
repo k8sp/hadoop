@@ -1,9 +1,10 @@
-
-
 ## Hadoop Example
 
 * ResourceManager and NodeManager will be running with docker on k8s.
 * HDFS is used for test, now it is running in docker with single node mode.
+
+## Cluster init
+Checkout: (init/README.md)
 
 ## Usage
 
