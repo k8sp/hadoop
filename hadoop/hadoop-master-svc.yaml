@@ -26,4 +26,4 @@ spec:
     protocol: TCP
   - name: webapp
     port: 8090
-    protocol: TCP
+    protocol: TCP 

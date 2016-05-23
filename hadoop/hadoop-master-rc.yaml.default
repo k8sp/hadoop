@@ -1,26 +1,26 @@
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: hadoop
+  name: hadoop-master
   labels:
-    component: hadoop 
+    component: hadoop-master
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        component: hadoop
+        component: hadoop-master
     spec:
+      imagePullSecrets:
+      - name: bfdreg
       containers:
-      - name: hadoop
-        securityContext:
-          capabilities:
-            add:
-              - IPC_LOCK
-        image: bfd/rdc/hadoop-master:1.0
+      - name: hadoop-master
+        image: yancey1989/hadoop-master:1.2
         env:
-        - name: "CMD"
-          value: "resoucemanager"
+        - name: ZOOKEEPER_ADDR
+          value: <ZOOKEEPER_ADDR>
+        - name: HDFS_HOST
+          value: <HDFS_HOST>
         ports:
         - containerPort: 8088
           hostPort: 18088
@@ -32,3 +32,5 @@ spec:
       volumes:
       - name: storage
         emptyDir: {}
+      - name: hadoop-slave
+
