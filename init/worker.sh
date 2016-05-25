@@ -64,9 +64,9 @@ detect_lsb() {
         *64)
             ;;
         *)
-	        echo "Error: We currently only support 64-bit platforms."
-	        exit 1
-	        ;;
+            echo "Error: We currently only support 64-bit platforms."
+            exit 1
+            ;;
     esac
 
     if command_exists lsb_release; then
@@ -88,10 +88,10 @@ detect_lsb() {
     lsb_dist="$(echo ${lsb_dist} | tr '[:upper:]' '[:lower:]')"
 
     case "${lsb_dist}" in
-        amzn|centos|debian|ubuntu)
+        amzn|centos|debian|ubuntu|coreos)
             ;;
         *)
-            echo "Error: We currently only support ubuntu|debian|amzn|centos."
+            echo "Error: We currently only support ubuntu|debian|amzn|centos|coreos."
             exit 1
             ;;
     esac
@@ -162,6 +162,12 @@ start_k8s() {
             echo "OPTIONS=\"\$OPTIONS --mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET}\"" | tee -a ${DOCKER_CONF}
             ifconfig docker0 down
             yum -y -q install bridge-utils && brctl delbr docker0 && service docker restart
+            ;;
+        coreos)
+            DOCKER_CONF="/run/flannel_docker_opts.env"
+            echo "DOCKER_OPTS=\"--selinux-enabled=false\"" | tee -a ${DOCKER_CONF}
+            ifconfig docker0 down
+            brctl delbr docker0 && systemctl restart docker
             ;;
         ubuntu|debian) # TODO: today ubuntu uses systemd. Handle that too
             DOCKER_CONF="/etc/default/docker"
