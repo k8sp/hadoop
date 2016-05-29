@@ -83,12 +83,6 @@ FLANNEL_DOCKER_SOCK=/var/run/early-docker.sock
 
 ---
 coreos:
-  etcd2:
-    discovery: https://discovery.etcd.io/20b979e4b10e8c56abd336410b6af5f2
-    advertise-client-urls: http://$public_ipv4:2379
-    initial-advertise-peer-urls: http://$private_ipv4:2380
-    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
-    listen-peer-urls: http://$private_ipv4:2380,http://$private_ipv4:7001
   fleet:
     public-ip: $public_ipv4
   units:
