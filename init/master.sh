@@ -33,6 +33,12 @@ FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.5"}
 FLANNEL_IPMASQ=${FLANNEL_IPMASQ:-"true"}
 FLANNEL_IFACE=${FLANNEL_IFACE:-"eth0"}
 ARCH=${ARCH:-"amd64"}
+FLANNEL_DOCKER_SOCK=${FLANNEL_DOCKER_SOCK:-"unix:///var/run/early-docker.sock"}
+if [ ! -z $BOOTSTRAP_FLANNEL ]; then
+  BOOTSTRAP_FLANNEL=true
+else
+  BOOTSTRAP_FLANNEL=false
+fi
 
 # Run as root
 if [ "$(id -u)" != "0" ]; then
@@ -169,7 +175,8 @@ start_flannel(){
 
 config_docker_network(){
     # Copy flannel env out and source it on the host
-    docker -H unix:///var/run/docker-bootstrap.sock \
+    flannelCID=$(docker -H ${FLANNEL_DOCKER_SOCK} | grep flannel | grep -v grep | awk '{print $1}')
+    docker -H $FLANNEL_DOCKER_SOCK \
         cp ${flannelCID}:/run/flannel/subnet.env .
     source subnet.env
 
@@ -182,12 +189,22 @@ config_docker_network(){
             yum -y -q install bridge-utils && brctl delbr docker0 && service docker restart
             ;;
         coreos)
+            # disable selinux for docker issues
             DOCKER_CONF="/run/flannel_docker_opts.env"
             echo "DOCKER_OPTS=\"--selinux-enabled=false\"" | tee -a ${DOCKER_CONF}
+            if [ $BOOTSTRAP_FLANNEL ]; then
+              # delete lines if exists
+              sed -i "/DOCKER_OPT_BIP.*/d" $DOCKER_CONF
+              sed -i "/DOCKER_OPT_MTU.*/d" $DOCKER_CONF
+              # use env file to setup docker daemon
+              echo "DOCKER_OPT_BIP=\"--bip=${FLANNEL_SUBNET}\"" | tee -a ${DOCKER_CONF}
+              echo "DOCKER_OPT_MTU=\"--mtu=${FLANNEL_MTU}\"" | tee -a ${DOCKER_CONF}
+            fi
             ifconfig docker0 down
             brctl delbr docker0 && systemctl restart docker
             ;;
         centos)
+            # FIXME: use EnvironmentFile, why centos systemd not work?
             # use systemd drop in instead of /etc/sysconfig/docker
             DOCKER_CONF="/etc/systemd/system/docker.service.d/docker.conf"
             if [ ! -f $DOCKER_CONF ]; then
@@ -258,11 +275,13 @@ start_kubelet(){
 echo "Detecting your OS distro ..."
 detect_lsb
 
-echo "Starting bootstrap docker ..."
-bootstrap_daemon
+if [ $BOOTSTRAP_FLANNEL ]; then
+  echo "Starting bootstrap docker ..."
+  bootstrap_daemon
 
-echo "start flannel service within bootstrap docker ..."
-start_flannel
+  echo "start flannel service within bootstrap docker ..."
+  start_flannel
+fi
 
 echo "config docker network to work with flannel ..."
 config_docker_network

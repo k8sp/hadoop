@@ -31,6 +31,12 @@ FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.5"}
 FLANNEL_IFACE=${FLANNEL_IFACE:-"eth0"}
 FLANNEL_IPMASQ=${FLANNEL_IPMASQ:-"true"}
 ARCH=${ARCH:-"amd64"}
+FLANNEL_DOCKER_SOCK=${FLANNEL_DOCKER_SOCK:-"unix:///var/run/early-docker.sock"}
+if [ ! -z $BOOTSTRAP_FLANNEL ]; then
+  BOOTSTRAP_FLANNEL=true
+else
+  BOOTSTRAP_FLANNEL=false
+fi
 
 # Run as root
 if [ "$(id -u)" != "0" ]; then
@@ -125,7 +131,7 @@ bootstrap_daemon() {
 DOCKER_CONF=""
 
 # Start k8s components in containers
-start_k8s() {
+start_flannel() {
     # Start flannel
     flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run \
         -d \
@@ -140,17 +146,43 @@ start_k8s() {
             --iface="${FLANNEL_IFACE}")
 
     sleep 10
+}
 
+config_docker_network() {
     # Copy flannel env out and source it on the host
-    docker -H unix:///var/run/docker-bootstrap.sock \
+    flannelCID=$(docker -H ${FLANNEL_DOCKER_SOCK} | grep flannel | grep -v grep | awk '{print $1}')
+    docker -H $FLANNEL_DOCKER_SOCK \
         cp ${flannelCID}:/run/flannel/subnet.env .
     source subnet.env
 
     # Configure docker net settings, then restart it
     case "${lsb_dist}" in
+        coreos)
+            DOCKER_CONF="/run/flannel_docker_opts.env"
+            echo "DOCKER_OPTS=\"--selinux-enabled=false\"" | tee -a ${DOCKER_CONF}
+            if [ $BOOTSTRAP_FLANNEL ]; then
+              # delete lines if exists
+              sed -i "/DOCKER_OPT_BIP.*/d" $DOCKER_CONF
+              sed -i "/DOCKER_OPT_MTU.*/d" $DOCKER_CONF
+              # use env file to setup docker daemon
+              echo "DOCKER_OPT_BIP=\"--bip=${FLANNEL_SUBNET}\"" | tee -a ${DOCKER_CONF}
+              echo "DOCKER_OPT_MTU=\"--mtu=${FLANNEL_MTU}\"" | tee -a ${DOCKER_CONF}
+            fi
+            ifconfig docker0 down
+            brctl delbr docker0 && systemctl restart docker
+            ;;
         centos)
-            DOCKER_CONF="/etc/sysconfig/docker"
-            echo "OPTIONS=\"\$OPTIONS --mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET}\"" | tee -a ${DOCKER_CONF}
+            # FIXME: use EnvironmentFile, why centos systemd not work?
+            # use systemd drop in instead of /etc/sysconfig/docker
+            DOCKER_CONF="/etc/systemd/system/docker.service.d/docker.conf"
+            if [ ! -f $DOCKER_CONF ]; then
+              mkdir -p /etc/systemd/system/docker.service.d
+            fi
+            systemctl stop docker
+            echo "[Service]
+ExecStart=
+ExecStart=/usr/bin/docker daemon -H fd:// --mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET}" | tee -a $DOCKER_CONF
+            #echo "OPTIONS=\"\$OPTIONS --mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET}\"" | tee -a ${DOCKER_CONF}
             if ! command_exists ifconfig; then
                 yum -y -q install net-tools
             fi
@@ -162,12 +194,6 @@ start_k8s() {
             echo "OPTIONS=\"\$OPTIONS --mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET}\"" | tee -a ${DOCKER_CONF}
             ifconfig docker0 down
             yum -y -q install bridge-utils && brctl delbr docker0 && service docker restart
-            ;;
-        coreos)
-            DOCKER_CONF="/run/flannel_docker_opts.env"
-            echo "DOCKER_OPTS=\"--selinux-enabled=false\"" | tee -a ${DOCKER_CONF}
-            ifconfig docker0 down
-            brctl delbr docker0 && systemctl restart docker
             ;;
         ubuntu|debian) # TODO: today ubuntu uses systemd. Handle that too
             DOCKER_CONF="/etc/default/docker"
@@ -190,7 +216,9 @@ start_k8s() {
 
     # sleep a little bit
     sleep 5
+}
 
+start_kubelet() {
     # Start kubelet & proxy in container
     # TODO: Use secure port for communication
     docker run \
@@ -230,10 +258,18 @@ start_k8s() {
 echo "Detecting your OS distro ..."
 detect_lsb
 
-echo "Starting bootstrap docker ..."
-bootstrap_daemon
+if [ $BOOTSTRAP_FLANNEL ]; then
+  echo "Starting bootstrap docker ..."
+  bootstrap_daemon
 
-echo "Starting k8s ..."
-start_k8s
+  echo "start flannel service within bootstrap docker ..."
+  start_flannel
+fi
+
+echo "config docker network to work with flannel ..."
+config_docker_network
+
+echo "start kublet service ..."
+start_kubelet
 
 echo "Worker done!"
