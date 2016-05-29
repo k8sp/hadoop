@@ -33,6 +33,8 @@ FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.5"}
 FLANNEL_IPMASQ=${FLANNEL_IPMASQ:-"true"}
 FLANNEL_IFACE=${FLANNEL_IFACE:-"eth0"}
 ARCH=${ARCH:-"amd64"}
+FLANNEL_DOCKER_SOCK=${FLANNEL_DOCKER_SOCK:-"unix:///var/run/early-docker.sock"}
+BOOTSTRAP_FLANNEL=${BOOTSTRAP_FLANNEL:-"false"}
 
 # Run as root
 if [ "$(id -u)" != "0" ]; then
@@ -116,7 +118,7 @@ bootstrap_daemon() {
     # https://github.com/kubernetes/kubernetes/issues/24654
     # https://github.com/docker/docker/issues/22684
     ${docker_daemon} \
-        -H unix:///var/run/docker-bootstrap.sock \
+        -H $FLANNEL_DOCKER_SOCK \
         -p /var/run/docker-bootstrap.pid \
         --iptables=false \
         --ip-masq=false \
@@ -134,7 +136,7 @@ DOCKER_CONF=""
 
 start_flannel(){
     # Start etcd
-    docker -H unix:///var/run/docker-bootstrap.sock run \
+    docker -H $FLANNEL_DOCKER_SOCK run \
         --restart=on-failure \
         --net=host \
         -d \
@@ -146,14 +148,14 @@ start_flannel(){
 
     sleep 5
     # Set flannel net config
-    docker -H unix:///var/run/docker-bootstrap.sock run \
+    docker -H $FLANNEL_DOCKER_SOCK run \
         --net=host typhoon1986/etcd:${ETCD_VERSION} \
         etcdctl \
         set /coreos.com/network/config \
             '{ "Network": "10.1.0.0/16", "Backend": {"Type": "vxlan"}}'
 
     # iface may change to a private network interface, eth0 is for default
-    flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run \
+    flannelCID=$(docker -H $FLANNEL_DOCKER_SOCK run \
         --restart=on-failure \
         -d \
         --net=host \
@@ -169,7 +171,8 @@ start_flannel(){
 
 config_docker_network(){
     # Copy flannel env out and source it on the host
-    docker -H unix:///var/run/docker-bootstrap.sock \
+    flannelCID=$(docker -H ${FLANNEL_DOCKER_SOCK} ps | grep flannel | grep -v grep | awk '{print $1}')
+    docker -H $FLANNEL_DOCKER_SOCK \
         cp ${flannelCID}:/run/flannel/subnet.env .
     source subnet.env
 
@@ -182,12 +185,22 @@ config_docker_network(){
             yum -y -q install bridge-utils && brctl delbr docker0 && service docker restart
             ;;
         coreos)
+            # disable selinux for docker issues
             DOCKER_CONF="/run/flannel_docker_opts.env"
             echo "DOCKER_OPTS=\"--selinux-enabled=false\"" | tee -a ${DOCKER_CONF}
+            if [ "$BOOTSTRAP_FLANNEL" == "true" ]; then
+              # delete lines if exists
+              sed -i "/DOCKER_OPT_BIP.*/d" $DOCKER_CONF
+              sed -i "/DOCKER_OPT_MTU.*/d" $DOCKER_CONF
+              # use env file to setup docker daemon
+              echo "DOCKER_OPT_BIP=\"--bip=${FLANNEL_SUBNET}\"" | tee -a ${DOCKER_CONF}
+              echo "DOCKER_OPT_MTU=\"--mtu=${FLANNEL_MTU}\"" | tee -a ${DOCKER_CONF}
+            fi
             ifconfig docker0 down
             brctl delbr docker0 && systemctl restart docker
             ;;
         centos)
+            # FIXME: use EnvironmentFile, why centos systemd not work?
             # use systemd drop in instead of /etc/sysconfig/docker
             DOCKER_CONF="/etc/systemd/system/docker.service.d/docker.conf"
             if [ ! -f $DOCKER_CONF ]; then
@@ -258,11 +271,13 @@ start_kubelet(){
 echo "Detecting your OS distro ..."
 detect_lsb
 
-echo "Starting bootstrap docker ..."
-bootstrap_daemon
+if [ "$BOOTSTRAP_FLANNEL" == "true" ]; then
+  echo "Starting bootstrap docker ..."
+  bootstrap_daemon
 
-echo "start flannel service within bootstrap docker ..."
-start_flannel
+  echo "start flannel service within bootstrap docker ..."
+  start_flannel
+fi
 
 echo "config docker network to work with flannel ..."
 config_docker_network
