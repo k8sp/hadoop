@@ -43,6 +43,10 @@ docker -H unix:///var/run/early-docker.sock ps
 docker -H unix:///var/run/early-docker.sock logs [your flannel container name]
 ```
 ## 部署kubernetes
+先编辑/etc/hosts文件，可以通过hostname访问到每个机器，比如：
+```
+172.17.8.101 core-01
+```
 执行下面的命令完成初始化
 ```
 git clone https://github.com/k8sp/hadoop.git
