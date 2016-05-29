@@ -146,7 +146,7 @@ start_flannel() {
 
 config_docker_network() {
     # Copy flannel env out and source it on the host
-    flannelCID=$(docker -H ${FLANNEL_DOCKER_SOCK} | grep flannel | grep -v grep | awk '{print $1}')
+    flannelCID=$(docker -H ${FLANNEL_DOCKER_SOCK} ps | grep flannel | grep -v grep | awk '{print $1}')
     docker -H $FLANNEL_DOCKER_SOCK \
         cp ${flannelCID}:/run/flannel/subnet.env .
     source subnet.env
