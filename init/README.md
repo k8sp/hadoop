@@ -77,6 +77,25 @@ export FLANNEL_IPMASQ=true
 FLANNEL_DOCKER_SOCK=/var/run/early-docker.sock
 #FLANNEL_DOCKER_SOCK=/var/run/docker-bootstrap.sock
 ```
+下面是不使用coreos的cloud-config启动etcd和flannel的配置：
+```
+#cloud-config
+
+---
+coreos:
+  etcd2:
+    discovery: https://discovery.etcd.io/20b979e4b10e8c56abd336410b6af5f2
+    advertise-client-urls: http://$public_ipv4:2379
+    initial-advertise-peer-urls: http://$private_ipv4:2380
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
+    listen-peer-urls: http://$private_ipv4:2380,http://$private_ipv4:7001
+  fleet:
+    public-ip: $public_ipv4
+  units:
+  - name: fleet.service
+    command: start
+```
+
 如果是在CoreOS上，检查/run/flannel_docker_opts.env是否正确，检查flannel服务正常运行
 然后执行：
 ```
