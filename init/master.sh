@@ -34,11 +34,7 @@ FLANNEL_IPMASQ=${FLANNEL_IPMASQ:-"true"}
 FLANNEL_IFACE=${FLANNEL_IFACE:-"eth0"}
 ARCH=${ARCH:-"amd64"}
 FLANNEL_DOCKER_SOCK=${FLANNEL_DOCKER_SOCK:-"unix:///var/run/early-docker.sock"}
-if [ ! -z $BOOTSTRAP_FLANNEL ]; then
-  BOOTSTRAP_FLANNEL=true
-else
-  BOOTSTRAP_FLANNEL=false
-fi
+BOOTSTRAP_FLANNEL=${BOOTSTRAP_FLANNEL:-"false"}
 
 # Run as root
 if [ "$(id -u)" != "0" ]; then
@@ -122,7 +118,7 @@ bootstrap_daemon() {
     # https://github.com/kubernetes/kubernetes/issues/24654
     # https://github.com/docker/docker/issues/22684
     ${docker_daemon} \
-        -H unix:///var/run/docker-bootstrap.sock \
+        -H $FLANNEL_DOCKER_SOCK \
         -p /var/run/docker-bootstrap.pid \
         --iptables=false \
         --ip-masq=false \
@@ -140,7 +136,7 @@ DOCKER_CONF=""
 
 start_flannel(){
     # Start etcd
-    docker -H unix:///var/run/docker-bootstrap.sock run \
+    docker -H $FLANNEL_DOCKER_SOCK run \
         --restart=on-failure \
         --net=host \
         -d \
@@ -152,14 +148,14 @@ start_flannel(){
 
     sleep 5
     # Set flannel net config
-    docker -H unix:///var/run/docker-bootstrap.sock run \
+    docker -H $FLANNEL_DOCKER_SOCK run \
         --net=host typhoon1986/etcd:${ETCD_VERSION} \
         etcdctl \
         set /coreos.com/network/config \
             '{ "Network": "10.1.0.0/16", "Backend": {"Type": "vxlan"}}'
 
     # iface may change to a private network interface, eth0 is for default
-    flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run \
+    flannelCID=$(docker -H $FLANNEL_DOCKER_SOCK run \
         --restart=on-failure \
         -d \
         --net=host \
@@ -192,7 +188,7 @@ config_docker_network(){
             # disable selinux for docker issues
             DOCKER_CONF="/run/flannel_docker_opts.env"
             echo "DOCKER_OPTS=\"--selinux-enabled=false\"" | tee -a ${DOCKER_CONF}
-            if [ $BOOTSTRAP_FLANNEL ]; then
+            if [ "$BOOTSTRAP_FLANNEL" == "true" ]; then
               # delete lines if exists
               sed -i "/DOCKER_OPT_BIP.*/d" $DOCKER_CONF
               sed -i "/DOCKER_OPT_MTU.*/d" $DOCKER_CONF
@@ -275,7 +271,7 @@ start_kubelet(){
 echo "Detecting your OS distro ..."
 detect_lsb
 
-if [ $BOOTSTRAP_FLANNEL ]; then
+if [ "$BOOTSTRAP_FLANNEL" == "true" ]; then
   echo "Starting bootstrap docker ..."
   bootstrap_daemon
 

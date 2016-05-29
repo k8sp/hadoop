@@ -32,11 +32,7 @@ FLANNEL_IFACE=${FLANNEL_IFACE:-"eth0"}
 FLANNEL_IPMASQ=${FLANNEL_IPMASQ:-"true"}
 ARCH=${ARCH:-"amd64"}
 FLANNEL_DOCKER_SOCK=${FLANNEL_DOCKER_SOCK:-"unix:///var/run/early-docker.sock"}
-if [ ! -z $BOOTSTRAP_FLANNEL ]; then
-  BOOTSTRAP_FLANNEL=true
-else
-  BOOTSTRAP_FLANNEL=false
-fi
+BOOTSTRAP_FLANNEL=${BOOTSTRAP_FLANNEL:-"false"}
 
 # Run as root
 if [ "$(id -u)" != "0" ]; then
@@ -115,7 +111,7 @@ bootstrap_daemon() {
         docker_daemon="docker daemon"
     fi
     ${docker_daemon} \
-        -H unix:///var/run/docker-bootstrap.sock \
+        -H $FLANNEL_DOCKER_SOCK \
         -p /var/run/docker-bootstrap.pid \
         --iptables=false \
         --ip-masq=false \
@@ -133,7 +129,7 @@ DOCKER_CONF=""
 # Start k8s components in containers
 start_flannel() {
     # Start flannel
-    flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run \
+    flannelCID=$(docker -H $FLANNEL_DOCKER_SOCK run \
         -d \
         --restart=on-failure \
         --net=host \
@@ -160,7 +156,7 @@ config_docker_network() {
         coreos)
             DOCKER_CONF="/run/flannel_docker_opts.env"
             echo "DOCKER_OPTS=\"--selinux-enabled=false\"" | tee -a ${DOCKER_CONF}
-            if [ $BOOTSTRAP_FLANNEL ]; then
+            if [ "$BOOTSTRAP_FLANNEL" == "true" ]; then
               # delete lines if exists
               sed -i "/DOCKER_OPT_BIP.*/d" $DOCKER_CONF
               sed -i "/DOCKER_OPT_MTU.*/d" $DOCKER_CONF
@@ -258,7 +254,7 @@ start_kubelet() {
 echo "Detecting your OS distro ..."
 detect_lsb
 
-if [ $BOOTSTRAP_FLANNEL ]; then
+if [ "$BOOTSTRAP_FLANNEL" == "true" ]; then
   echo "Starting bootstrap docker ..."
   bootstrap_daemon
 

@@ -12,3 +12,8 @@ export ETCD_VERSION=2.2.1
 export FLANNEL_VERSION=0.5.5
 export FLANNEL_IFACE=eth0
 export FLANNEL_IPMASQ=true
+# uncomment this to enable start a bootstrap docker daemon at /var/run/bootstrap-docker.sock
+# and start flannel under it
+#export BOOTSTRAP_FLANNEL=false
+FLANNEL_DOCKER_SOCK=/var/run/early-docker.sock
+#FLANNEL_DOCKER_SOCK=/var/run/docker-bootstrap.sock
