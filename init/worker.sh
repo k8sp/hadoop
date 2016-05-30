@@ -20,13 +20,13 @@
 set -e
 
 # Make sure docker daemon is running
-if ( ! ps -ef | grep "/usr/bin/docker" | grep -v 'grep' &> /dev/null  ); then
+if ( ! ps -ef |grep `cat /var/run/docker.pid` | grep -v 'grep' &> /dev/null); then
     echo "Docker is not running on this machine!"
     exit 1
 fi
 
 # Make sure k8s version env is properly set
-K8S_VERSION=${K8S_VERSION:-"1.2.0-alpha.7"}
+K8S_VERSION=${K8S_VERSION:-"1.2.0"}
 FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.5"}
 FLANNEL_IFACE=${FLANNEL_IFACE:-"eth0"}
 FLANNEL_IPMASQ=${FLANNEL_IPMASQ:-"true"}

@@ -21,7 +21,7 @@
 set -e
 
 # Make sure docker daemon is running
-if ( ! ps -ef | grep "/usr/bin/docker" | grep -v 'grep' &> /dev/null ); then
+if ( ! ps -ef |grep `cat /var/run/docker.pid` | grep -v 'grep' &> /dev/null); then
     echo "Docker is not running on this machine!"
     exit 1
 fi
