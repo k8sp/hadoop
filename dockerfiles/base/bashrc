@@ -1,0 +1,25 @@
+#!/bin/bash
+export HADOOP_HOME=$hadoops/hadoop
+export HADOOP_INSTALL=$HADOOP_HOME 
+export PATH=$PATH:$HADOOP_INSTALL/bin 
+export PATH=$PATH:$HADOOP_INSTALL/sbin 
+export HADOOP_MAPRED_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_HOME=$HADOOP_INSTALL
+export HADOOP_HDFS_HOME=$HADOOP_INSTALL 
+export YARN_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_INSTALL/lib/native 
+export BIGDATA_HOME=$hadoops
+export LOG_HOME=${BIGDATA_HOME}/logs/
+export TMP_HOME=${BIGDATA_HOME}/locals/
+export PID_HOME=${BIGDATA_HOME}/pid/
+
+export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
+export HADOOP_LOG_DIR=${LOG_HOME}/hadoop
+export HADOOP_PID_DIR=${PID_HOME}/hadoop
+export YARN_LOG_DIR=${LOG_HOME}/hadoop
+export YARN_PID_DIR=${PID_HOME}/hadoop
+
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+export HADOOP_PREFIX=$hadoops/hadoop
+export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop/
+
