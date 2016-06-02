@@ -9,6 +9,7 @@ COPY run.sh $HADOOP_HOME/run.sh
 RUN chown -R hadoop ${hadoops}
 RUN chmod a+x $HADOOP_HOME/run.sh
 RUN mkdir -p /opt/hdfs
+RUN mkdir -p /var/lib/hadoop
 RUN apt-get install -y net-tools
 # Mapred ports
 EXPOSE 50020 9000 50070 50010 50075
