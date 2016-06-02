@@ -1,4 +1,4 @@
-FROM yancey1989/hadoop-base-2.6.4:1.3
+FROM yancey1989/hadoop-base:1.3
  
 USER root
 ENV hadoops /opt/hadoops
