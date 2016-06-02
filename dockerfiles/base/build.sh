@@ -1,2 +1,2 @@
 #!/bin/bash
-docker build -t bfd/rdc/hadoop-base-2.6.4:1.3 .
+docker build -t yancey1989/hadoop-base:1.3 .
