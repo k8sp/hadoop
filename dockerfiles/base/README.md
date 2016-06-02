@@ -1,2 +1,2 @@
 ## Build
-1. ./build.sh
+*./build.sh*
