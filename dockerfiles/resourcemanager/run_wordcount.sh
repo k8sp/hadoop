@@ -14,7 +14,7 @@ hadoop fs -mkdir -p /xu.yan/input
 hdfs dfs -put ./input/* /xu.yan/input
 
 # run wordcount
-hadoop jar $hadoops/hadoop/share/hadoop/mapreduce/sources/hadoop-mapreduce-examples-2.6.0-sources.jar org.apache.hadoop.examples.WordCount /xu.yan/input /xu.yan/output
+hadoop jar $hadoops/hadoop/share/hadoop/mapreduce/sources/hadoop-mapreduce-examples-2.6.4-sources.jar org.apache.hadoop.examples.WordCount /xu.yan/input /xu.yan/output
 
 # print the input files
 echo -e "\ninput file1.txt:"
