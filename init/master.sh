@@ -241,6 +241,10 @@ ExecStart=/usr/bin/docker daemon -H fd:// --mtu=${FLANNEL_MTU} --bip=${FLANNEL_S
 }
 
 start_kubelet(){
+    # Change bind ip of apiserver
+    mkdir -p /etc/kubernetes/manifests-multi
+    sed "s/MASTER_IP/${MASTER_IP}/g" master.json > /etc/kubernetes/manifests-multi/master.json
+    sed "s/MASTER_IP/${MASTER_IP}/g" kube-proxy.json > /etc/kubernetes/manifests-multi/kube-proxy.json
     # Start kubelet and then start master components as pods
     docker run \
         --net=host \
@@ -253,13 +257,14 @@ start_kubelet(){
         -v /:/rootfs:ro \
         -v /var/lib/docker/:/var/lib/docker:rw \
         -v /var/lib/kubelet/:/var/lib/kubelet:rw \
+        -v /etc/kubernetes/manifests-multi:/etc/kubernetes/manifests-multi:rw \
         typhoon1986/hyperkube-${ARCH}:v${K8S_VERSION} \
         /hyperkube kubelet \
             --pod_infra_container_image="typhoon1986/pause:2.0" \
             --address=0.0.0.0 \
             --allow-privileged=true \
             --enable-server \
-            --api-servers=http://localhost:8080 \
+            --api-servers=http://${MASTER_IP}:8080 \
             --config=/etc/kubernetes/manifests-multi \
             --cluster-dns=10.0.0.10 \
             --cluster-domain=cluster.local \
